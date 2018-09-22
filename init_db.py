@@ -89,7 +89,6 @@ def define_resource_table(name, items, *columns):
     columns_str = ', '.join(map(lambda column: column.sql_def, columns))
     create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
 
-    sql('DROP TABLE IF EXISTS %s' % name)
     sql(create)
 
     for item in items:
@@ -98,6 +97,34 @@ def define_resource_table(name, items, *columns):
         for column in columns:
             kw[column.name] = column.value(item)
         sql_insert(name, 'id', **kw)
+
+def define_edge_table(name, source_table, source_data, fields_fn, target_table):
+    create = 'CREATE TABLE %s (%s_id text REFERENCES %s (id), %s_id text REFERENCES %s (id))' \
+             % (name, source_table, source_table, target_table, target_table)
+
+    sql(create)
+
+    for item in source_data:
+        for target_id in fields_fn(item):
+            kw = {}
+            kw['%s_id' % source_table] = item['url']
+            kw['%s_id' % target_table] = target_id
+            sql_insert(name, None, **kw)
+
+sql('DROP TABLE IF EXISTS people_films')
+sql('DROP TABLE IF EXISTS planet_films')
+sql('DROP TABLE IF EXISTS starship_films')
+sql('DROP TABLE IF EXISTS vehicle_films')
+sql('DROP TABLE IF EXISTS species_films')
+sql('DROP TABLE IF EXISTS starship_pilots')
+sql('DROP TABLE IF EXISTS vehicle_pilots')
+
+sql('DROP TABLE IF EXISTS vehicles')
+sql('DROP TABLE IF EXISTS starships')
+sql('DROP TABLE IF EXISTS films')
+sql('DROP TABLE IF EXISTS people')
+sql('DROP TABLE IF EXISTS species')
+sql('DROP TABLE IF EXISTS planets')
 
 define_resource_table('planets', data['planets'],
                       Column('name', not_null=True),
@@ -161,5 +188,14 @@ define_resource_table('vehicles', data['vehicles'],
                       Column('crew'),
                       Column('passengers'),
                       Column('max_atmosphering_speed'))
+
+define_edge_table('people_films', 'people', data['people'], lambda person: person['films'], 'films')
+define_edge_table('planet_films', 'planets', data['planets'], lambda planet: planet['films'], 'films')
+define_edge_table('starship_films', 'starships', data['starships'], lambda starship: starship['films'], 'films')
+define_edge_table('vehicle_films', 'vehicles', data['vehicles'], lambda vehicle: vehicle['films'], 'films')
+define_edge_table('species_films', 'species', data['species'], lambda species: species['films'], 'films')
+
+define_edge_table('starship_pilots', 'starships', data['starships'], lambda starship: starship['pilots'], 'people')
+define_edge_table('vehicle_pilots', 'vehicles', data['vehicles'], lambda vehicle: vehicle['pilots'], 'people')
 
 dbconn.commit()
