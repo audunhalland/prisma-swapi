@@ -2,6 +2,11 @@ import json
 import psycopg2
 import requests
 import os
+import uuid
+
+from psycopg2.extras import Json
+
+psycopg2.extras.register_uuid()
 
 def swapi_list_resource(url):
     next_url = url
@@ -99,7 +104,7 @@ def define_resource_table(name, items, *columns):
         sql_insert(name, 'id', **kw)
 
 def define_edge_table(name, source_table, source_data, fields_fn, target_table):
-    create = 'CREATE TABLE %s (%s_id text REFERENCES %s (id), %s_id text REFERENCES %s (id))' \
+    create = 'CREATE TABLE %s (id UUID PRIMARY KEY, %s_id text REFERENCES %s (id), %s_id text REFERENCES %s (id))' \
              % (name, source_table, source_table, target_table, target_table)
 
     sql(create)
@@ -107,6 +112,7 @@ def define_edge_table(name, source_table, source_data, fields_fn, target_table):
     for item in source_data:
         for target_id in fields_fn(item):
             kw = {}
+            kw['id'] = psycopg2.extensions.adapt(uuid.uuid4())
             kw['%s_id' % source_table] = item['url']
             kw['%s_id' % target_table] = target_id
             sql_insert(name, None, **kw)
