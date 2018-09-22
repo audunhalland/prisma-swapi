@@ -29,6 +29,7 @@ def swapi_list_resource_cached(url):
 
 data = {
     'people': swapi_list_resource_cached('https://swapi.co/api/people'),
+    'planets': swapi_list_resource_cached('https://swapi.co/api/planets'),
 }
 
 dbconn = psycopg2.connect(dbname='starwarsdb',
@@ -53,10 +54,10 @@ def sql_insert(table, returning, **values):
         return dbcur.fetchall()[0]
 
 def filter_known(str):
-    return None if str == 'n/a' or str == 'unknown' else str
+    return None if str == 'n/a' or str == 'N/A' or str == 'unknown' else str
 
 def insert_people():
-    sql('DROP TABLE people')
+    sql('DROP TABLE IF EXISTS people')
     sql("""CREATE TABLE people (
     id text PRIMARY KEY,
     name text NOT NULL,
@@ -79,6 +80,34 @@ def insert_people():
                    birth_year=filter_known(person['birth_year']),
                    gender=filter_known(person['gender']))
 
+def insert_planets():
+    sql('DROP TABLE IF EXISTS planets')
+    sql("""CREATE TABLE planets (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    rotation_period text,
+    orbital_period text,
+    diameter text,
+    climate text,
+    gravity text,
+    terrain text,
+    surface_water text,
+    population text
+    )""")
+    for planet in data['planets']:
+        sql_insert('planets', 'id',
+                   id=planet['url'],
+                   name=planet['name'],
+                   rotation_period=filter_known(planet['rotation_period']),
+                   orbital_period=filter_known(planet['orbital_period']),
+                   diameter=filter_known(planet['diameter']),
+                   climate=filter_known(planet['climate']),
+                   gravity=filter_known(planet['gravity']),
+                   terrain=filter_known(planet['terrain']),
+                   surface_water=filter_known(planet['surface_water']),
+                   population=filter_known(planet['population']))
+
 insert_people()
+insert_planets()
 
 dbconn.commit()
