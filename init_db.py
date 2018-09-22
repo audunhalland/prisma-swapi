@@ -29,6 +29,10 @@ def swapi_list_resource_cached(url):
 
 data = {
     'people': swapi_list_resource_cached('https://swapi.co/api/people'),
+    'films': swapi_list_resource_cached('https://swapi.co/api/films'),
+    'starships': swapi_list_resource_cached('https://swapi.co/api/starships'),
+    'vehicles': swapi_list_resource_cached('https://swapi.co/api/vehicles'),
+    'species': swapi_list_resource_cached('https://swapi.co/api/species'),
     'planets': swapi_list_resource_cached('https://swapi.co/api/planets'),
 }
 
@@ -56,58 +60,106 @@ def sql_insert(table, returning, **values):
 def filter_known(str):
     return None if str == 'n/a' or str == 'N/A' or str == 'unknown' else str
 
-def insert_people():
-    sql('DROP TABLE IF EXISTS people')
-    sql("""CREATE TABLE people (
-    id text PRIMARY KEY,
-    name text NOT NULL,
-    height text,
-    mass text,
-    hair_color text,
-    skin_color text,
-    eye_color text,
-    birth_year text,
-    gender text
-    )""")
-    for person in data['people']:
-        sql_insert('people', 'id',
-                   id=person['url'],
-                   name=person['name'],
-                   height=filter_known(person['height']),
-                   mass=filter_known(person['mass']),
-                   hair_color=filter_known(person['hair_color']),
-                   eye_color=filter_known(person['eye_color']),
-                   birth_year=filter_known(person['birth_year']),
-                   gender=filter_known(person['gender']))
+class Column:
+    def __init__(self, name, sql_type='text', source_key=None, not_null=False, references=None):
+        self.name = name
+        self.sql_type = sql_type
+        self.not_null = not_null
+        self.source_key = source_key or name
+        self.references = references
 
-def insert_planets():
-    sql('DROP TABLE IF EXISTS planets')
-    sql("""CREATE TABLE planets (
-    id text PRIMARY KEY,
-    name text NOT NULL,
-    rotation_period text,
-    orbital_period text,
-    diameter text,
-    climate text,
-    gravity text,
-    terrain text,
-    surface_water text,
-    population text
-    )""")
-    for planet in data['planets']:
-        sql_insert('planets', 'id',
-                   id=planet['url'],
-                   name=planet['name'],
-                   rotation_period=filter_known(planet['rotation_period']),
-                   orbital_period=filter_known(planet['orbital_period']),
-                   diameter=filter_known(planet['diameter']),
-                   climate=filter_known(planet['climate']),
-                   gravity=filter_known(planet['gravity']),
-                   terrain=filter_known(planet['terrain']),
-                   surface_water=filter_known(planet['surface_water']),
-                   population=filter_known(planet['population']))
+    @property
+    def sql_def(self):
+        s = self.name
+        s += ' '
+        s += self.sql_type
+        if self.not_null:
+            s += ' NOT NULL'
+        if self.references:
+            s += ' REFERENCES %s (id)' % self.references
+        return s
 
-insert_people()
-insert_planets()
+    def value(self, item):
+        if self.not_null:
+            return item[self.source_key]
+        else:
+            return filter_known(item[self.source_key])
+
+def define_resource_table(name, items, *columns):
+    columns_str = ', '.join(map(lambda column: column.sql_def, columns))
+    create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
+
+    sql('DROP TABLE IF EXISTS %s' % name)
+    sql(create)
+
+    for item in items:
+        kw = {}
+        kw['id'] = item['url']
+        for column in columns:
+            kw[column.name] = column.value(item)
+        sql_insert(name, 'id', **kw)
+
+define_resource_table('planets', data['planets'],
+                      Column('name', not_null=True),
+                      Column('population'),
+                      Column('terrain'),
+                      Column('climate'),
+                      Column('rotation_period'),
+                      Column('orbital_period'),
+                      Column('diameter'),
+                      Column('gravity'),
+                      Column('surface_water'))
+
+define_resource_table('species', data['species'],
+                      Column('name', not_null=True),
+                      Column('classification', not_null=True),
+                      Column('designation'),
+                      Column('language'),
+                      Column('average_height'),
+                      Column('average_lifespan'),
+                      Column('homeworld', references='planets'))
+
+define_resource_table('people', data['people'],
+                      Column('name', not_null=True),
+                      Column('height'),
+                      Column('mass'),
+                      Column('hair_color'),
+                      Column('skin_color'),
+                      Column('eye_color'),
+                      Column('birth_year'),
+                      Column('gender'),
+                      Column('homeworld', references='planets'))
+
+define_resource_table('films', data['films'],
+                      Column('title', not_null=True),
+                      Column('director', not_null=True),
+                      Column('producer'),
+                      Column('release_date'),
+                      Column('opening_crawl'))
+
+define_resource_table('starships', data['starships'],
+                      Column('name', not_null=True),
+                      Column('starship_class', not_null=True),
+                      Column('model'),
+                      Column('manufacturer'),
+                      Column('length'),
+                      Column('MGLT'),
+                      Column('consumables'),
+                      Column('cost_in_credits'),
+                      Column('crew'),
+                      Column('hyperdrive_rating'),
+                      Column('passengers'))
+
+define_resource_table('vehicles', data['vehicles'],
+                      Column('name', not_null=True),
+                      Column('vehicle_class', not_null=True),
+                      Column('model'),
+                      Column('manufacturer'),
+                      Column('length'),
+                      Column('consumables'),
+                      Column('cost_in_credits'),
+                      Column('crew'),
+                      Column('passengers'),
+                      Column('max_atmosphering_speed'))
 
 dbconn.commit()
