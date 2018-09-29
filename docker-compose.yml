@@ -11,7 +11,7 @@ services:
       - POSTGRES_PASSWORD=prisma123
 
   prisma:
-    image: prismagraphql/prisma:1.15
+    image: prismagraphql/prisma:1.16.5
     restart: always
     ports:
       - 4466:4466
