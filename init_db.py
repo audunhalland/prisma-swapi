@@ -41,27 +41,6 @@ data = {
     'planets': swapi_list_resource_cached('https://swapi.co/api/planets'),
 }
 
-dbconn = psycopg2.connect(dbname='starwarsdb',
-                          user='prisma',
-                          password='prisma123',
-                          host='localhost',
-                          port=5432)
-dbcur = dbconn.cursor()
-
-def sql(stmt, *values):
-    dbcur.execute(stmt, *values)
-
-def sql_insert(table, returning, **values):
-    flat_values = [(column, value) for column, value in values.items()]
-    stmt = 'INSERT INTO %s (%s) VALUES (%s)%s' % \
-           (table,
-            ', '.join([v[0] for v in flat_values]),
-            ', '.join(['%s' for v in flat_values]),
-            ' RETURNING %s' % returning if returning else '')
-    sql(stmt, [v[1] for v in flat_values])
-    if returning:
-        return dbcur.fetchall()[0]
-
 def filter_known(str):
     return None if str == 'n/a' or str == 'N/A' or str == 'unknown' else str
 
@@ -90,118 +69,145 @@ class Column:
         else:
             return filter_known(item[self.source_key])
 
-def define_resource_table(name, items, *columns):
-    columns_str = ', '.join(map(lambda column: column.sql_def, columns))
-    create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
+def raw_sql():
+    dbconn = psycopg2.connect(dbname='starwarsdb',
+                              user='prisma',
+                              password='prisma123',
+                              host='localhost',
+                              port=5432)
 
-    sql(create)
+    dbcur = dbconn.cursor()
 
-    for item in items:
-        kw = {}
-        kw['id'] = item['url']
-        for column in columns:
-            kw[column.name] = column.value(item)
-        sql_insert(name, 'id', **kw)
+    def sql(stmt, *values):
+        dbcur.execute(stmt, *values)
 
-def define_edge_table(name, source_table, source_data, fields_fn, target_table):
-    create = 'CREATE TABLE %s (id UUID PRIMARY KEY, %s_id text REFERENCES %s (id), %s_id text REFERENCES %s (id))' \
-             % (name, source_table, source_table, target_table, target_table)
+    def sql_insert(table, returning, **values):
+        flat_values = [(column, value) for column, value in values.items()]
+        stmt = 'INSERT INTO %s (%s) VALUES (%s)%s' % \
+               (table,
+                ', '.join([v[0] for v in flat_values]),
+                ', '.join(['%s' for v in flat_values]),
+                ' RETURNING %s' % returning if returning else '')
+        sql(stmt, [v[1] for v in flat_values])
+        if returning:
+            return dbcur.fetchall()[0]
 
-    sql(create)
+    def define_resource_table(name, items, *columns):
+        columns_str = ', '.join(map(lambda column: column.sql_def, columns))
+        create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
 
-    for item in source_data:
-        for target_id in fields_fn(item):
+        sql(create)
+
+        for item in items:
             kw = {}
-            kw['id'] = psycopg2.extensions.adapt(uuid.uuid4())
-            kw['%s_id' % source_table] = item['url']
-            kw['%s_id' % target_table] = target_id
-            sql_insert(name, None, **kw)
+            kw['id'] = item['url']
+            for column in columns:
+                kw[column.name] = column.value(item)
+            sql_insert(name, 'id', **kw)
 
-sql('DROP TABLE IF EXISTS people_films')
-sql('DROP TABLE IF EXISTS planet_films')
-sql('DROP TABLE IF EXISTS starship_films')
-sql('DROP TABLE IF EXISTS vehicle_films')
-sql('DROP TABLE IF EXISTS species_films')
-sql('DROP TABLE IF EXISTS starship_pilots')
-sql('DROP TABLE IF EXISTS vehicle_pilots')
+    def define_edge_table(name, source_table, source_data, fields_fn, target_table):
+        # id UUID PRIMARY KEY,
 
-sql('DROP TABLE IF EXISTS vehicles')
-sql('DROP TABLE IF EXISTS starships')
-sql('DROP TABLE IF EXISTS films')
-sql('DROP TABLE IF EXISTS people')
-sql('DROP TABLE IF EXISTS species')
-sql('DROP TABLE IF EXISTS planets')
+        create = """CREATE TABLE %s (
+        %s_id text REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
+        %s_id text REFERENCES %s (id) ON UPDATE CASCADE
+        )""" % (name, source_table, source_table, target_table, target_table)
 
-define_resource_table('planets', data['planets'],
-                      Column('name', not_null=True),
-                      Column('population'),
-                      Column('terrain'),
-                      Column('climate'),
-                      Column('rotation_period'),
-                      Column('orbital_period'),
-                      Column('diameter'),
-                      Column('gravity'),
-                      Column('surface_water'))
+        sql(create)
 
-define_resource_table('species', data['species'],
-                      Column('name', not_null=True),
-                      Column('classification', not_null=True),
-                      Column('designation'),
-                      Column('language'),
-                      Column('average_height'),
-                      Column('average_lifespan'),
-                      Column('homeworld', references='planets'))
+        for item in source_data:
+            for target_id in fields_fn(item):
+                kw = {}
+                #kw['id'] = psycopg2.extensions.adapt(uuid.uuid4())
+                kw['%s_id' % source_table] = item['url']
+                kw['%s_id' % target_table] = target_id
+                sql_insert(name, None, **kw)
 
-define_resource_table('people', data['people'],
-                      Column('name', not_null=True),
-                      Column('height'),
-                      Column('mass'),
-                      Column('hair_color'),
-                      Column('skin_color'),
-                      Column('eye_color'),
-                      Column('birth_year'),
-                      Column('gender'),
-                      Column('homeworld', references='planets'))
+    sql('DROP TABLE IF EXISTS people_films')
+    sql('DROP TABLE IF EXISTS planet_films')
+    sql('DROP TABLE IF EXISTS starship_films')
+    sql('DROP TABLE IF EXISTS vehicle_films')
+    sql('DROP TABLE IF EXISTS species_films')
+    sql('DROP TABLE IF EXISTS starship_pilots')
+    sql('DROP TABLE IF EXISTS vehicle_pilots')
 
-define_resource_table('films', data['films'],
-                      Column('title', not_null=True),
-                      Column('director', not_null=True),
-                      Column('producer'),
-                      Column('release_date'),
-                      Column('opening_crawl'))
+    sql('DROP TABLE IF EXISTS vehicles')
+    sql('DROP TABLE IF EXISTS starships')
+    sql('DROP TABLE IF EXISTS films')
+    sql('DROP TABLE IF EXISTS people')
+    sql('DROP TABLE IF EXISTS species')
+    sql('DROP TABLE IF EXISTS planets')
 
-define_resource_table('starships', data['starships'],
-                      Column('name', not_null=True),
-                      Column('starship_class', not_null=True),
-                      Column('model'),
-                      Column('manufacturer'),
-                      Column('length'),
-                      Column('MGLT'),
-                      Column('consumables'),
-                      Column('cost_in_credits'),
-                      Column('crew'),
-                      Column('hyperdrive_rating'),
-                      Column('passengers'))
+    define_resource_table('planets', data['planets'],
+                          Column('name', not_null=True),
+                          Column('population'),
+                          Column('terrain'),
+                          Column('climate'),
+                          Column('rotation_period'),
+                          Column('orbital_period'),
+                          Column('diameter'),
+                          Column('gravity'),
+                          Column('surface_water'))
 
-define_resource_table('vehicles', data['vehicles'],
-                      Column('name', not_null=True),
-                      Column('vehicle_class', not_null=True),
-                      Column('model'),
-                      Column('manufacturer'),
-                      Column('length'),
-                      Column('consumables'),
-                      Column('cost_in_credits'),
-                      Column('crew'),
-                      Column('passengers'),
-                      Column('max_atmosphering_speed'))
+    define_resource_table('species', data['species'],
+                          Column('name', not_null=True),
+                          Column('classification', not_null=True),
+                          Column('designation'),
+                          Column('language'),
+                          Column('average_height'),
+                          Column('average_lifespan'),
+                          Column('homeworld', references='planets'))
 
-define_edge_table('people_films', 'people', data['people'], lambda person: person['films'], 'films')
-define_edge_table('planet_films', 'planets', data['planets'], lambda planet: planet['films'], 'films')
-define_edge_table('starship_films', 'starships', data['starships'], lambda starship: starship['films'], 'films')
-define_edge_table('vehicle_films', 'vehicles', data['vehicles'], lambda vehicle: vehicle['films'], 'films')
-define_edge_table('species_films', 'species', data['species'], lambda species: species['films'], 'films')
+    define_resource_table('people', data['people'],
+                          Column('name', not_null=True),
+                          Column('height'),
+                          Column('mass'),
+                          Column('hair_color'),
+                          Column('skin_color'),
+                          Column('eye_color'),
+                          Column('birth_year'),
+                          Column('gender'),
+                          Column('homeworld', references='planets'))
 
-define_edge_table('starship_pilots', 'starships', data['starships'], lambda starship: starship['pilots'], 'people')
-define_edge_table('vehicle_pilots', 'vehicles', data['vehicles'], lambda vehicle: vehicle['pilots'], 'people')
+    define_resource_table('films', data['films'],
+                          Column('title', not_null=True),
+                          Column('director', not_null=True),
+                          Column('producer'),
+                          Column('release_date'),
+                          Column('opening_crawl'))
 
-dbconn.commit()
+    define_resource_table('starships', data['starships'],
+                          Column('name', not_null=True),
+                          Column('starship_class', not_null=True),
+                          Column('model'),
+                          Column('manufacturer'),
+                          Column('length'),
+                          Column('MGLT'),
+                          Column('consumables'),
+                          Column('cost_in_credits'),
+                          Column('crew'),
+                          Column('hyperdrive_rating'),
+                          Column('passengers'))
+
+    define_resource_table('vehicles', data['vehicles'],
+                          Column('name', not_null=True),
+                          Column('vehicle_class', not_null=True),
+                          Column('model'),
+                          Column('manufacturer'),
+                          Column('length'),
+                          Column('consumables'),
+                          Column('cost_in_credits'),
+                          Column('crew'),
+                          Column('passengers'),
+                          Column('max_atmosphering_speed'))
+
+    define_edge_table('people_films', 'people', data['people'], lambda person: person['films'], 'films')
+    define_edge_table('planet_films', 'planets', data['planets'], lambda planet: planet['films'], 'films')
+    define_edge_table('starship_films', 'starships', data['starships'], lambda starship: starship['films'], 'films')
+    define_edge_table('vehicle_films', 'vehicles', data['vehicles'], lambda vehicle: vehicle['films'], 'films')
+    define_edge_table('species_films', 'species', data['species'], lambda species: species['films'], 'films')
+
+    define_edge_table('starship_pilots', 'starships', data['starships'], lambda starship: starship['pilots'], 'people')
+    define_edge_table('vehicle_pilots', 'vehicles', data['vehicles'], lambda vehicle: vehicle['pilots'], 'people')
+
+    dbconn.commit()
