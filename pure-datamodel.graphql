@@ -1,0 +1,37 @@
+type Planet {
+  id: ID! @unique
+  name: String!
+  population: String
+  terrain: String
+  climate: String
+  rotationPeriod: String
+  orbitalPeriod: String
+  diameter: String
+  gravity: String
+  surfaceWater: String
+}
+
+type Species {
+  id: ID! @unique
+  name: String!
+}
+
+type People {
+  id: ID! @unique
+  name: String!
+}
+
+type Film {
+  id: ID! @unique
+  title: String!
+}
+
+type Starship {
+  id: ID! @unique
+  name: String!
+}
+
+type Vehicle {
+  id: ID! @unique
+  name: String!
+}
