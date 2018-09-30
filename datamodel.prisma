@@ -1,5 +1,5 @@
-type Planet @pgTable(name: "planets") {
-  id: ID! @unique
+type Planet @pgTable(name: "planet") {
+  id: UUID! @unique
   name: String!
   climate: String
   diameter: String
@@ -13,8 +13,8 @@ type Planet @pgTable(name: "planets") {
   films: [Film!]!
 }
 
-type Lifeform @pgTable(name: "lifeforms") {
-  id: ID! @unique
+type Lifeform @pgTable(name: "lifeform") {
+  id: UUID! @unique
   name: String!
   classification: String!
   language: String
@@ -22,11 +22,12 @@ type Lifeform @pgTable(name: "lifeforms") {
   average_height: String
   average_lifespan: String
   homeworld: Planet @pgRelation(column: "homeworld")
+  people: [Person!]!
   films: [Film!]!
 }
 
-type Person @pgTable(name: "people") {
-  id: ID! @unique
+type Person @pgTable(name: "person") {
+  id: UUID! @unique
   name: String!
   birth_year: String
   eye_color: String
@@ -36,12 +37,14 @@ type Person @pgTable(name: "people") {
   mass: String
   skin_color: String
   homeworld: Planet @pgRelation(column: "homeworld")
+  lifeforms: [Lifeform!]!
+  starships: [Starship!]!
   vehicles: [Vehicle!]!
   films: [Film!]!
 }
 
-type Starship @pgTable(name: "starships") {
-  id: ID! @unique
+type Starship @pgTable(name: "starship") {
+  id: UUID! @unique
   name: String!
   starship_class: String!
   model: String
@@ -57,8 +60,8 @@ type Starship @pgTable(name: "starships") {
   films: [Film!]!
 }
 
-type Vehicle @pgTable(name: "vehicles") {
-  id: ID! @unique
+type Vehicle @pgTable(name: "vehicle") {
+  id: UUID! @unique
   name: String!
   vehicle_class: String!
   model: String
@@ -73,16 +76,16 @@ type Vehicle @pgTable(name: "vehicles") {
   films: [Film!]!
 }
 
-type Film @pgTable(name: "films") {
-  id: ID! @unique
+type Film @pgTable(name: "film") {
+  id: UUID! @unique
   title: String!
   director: String!
   producer: String
   opening_crawl: String
   release_date: String
+  planets: [Planet!]!
   lifeforms: [Lifeform!]!
   people: [Person!]!
-  planets: [Planet!]!
   starships: [Starship!]!
   vehicles: [Vehicle!]!
 }
