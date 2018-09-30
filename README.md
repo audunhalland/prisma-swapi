@@ -7,7 +7,7 @@ npm install -g prisma
 prisma deploy
 ```
 
-Put generated .prisma file under `datamodel` inside `prisma.yml`
+Graphql api now live on `localhost:4466`
 
 ### Example mutation
 ```
