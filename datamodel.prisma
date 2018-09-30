@@ -1,0 +1,53 @@
+type Planet @pgTable(name: "planets") {
+  id: ID! @unique
+  name: String!
+  climate: String
+  diameter: String
+  gravity: String
+  orbital_period: String
+  population: String
+  rotation_period: String
+  surface_water: String
+  terrain: String
+  people: [Person!]!
+}
+
+type Lifeform @pgTable(name: "lifeforms") {
+  id: ID! @unique
+  name: String!
+  classification: String!
+  language: String
+  designation: String
+  average_height: String
+  average_lifespan: String
+  homeworld: Planet @pgRelation(column: "homeworld")
+}
+
+type Person @pgTable(name: "people") {
+  id: ID! @unique
+  name: String!
+  birth_year: String
+  eye_color: String
+  gender: String
+  hair_color: String
+  height: String
+  mass: String
+  skin_color: String
+  homeworld: Planet @pgRelation(column: "homeworld")
+  vehicles: [Vehicle!]!
+}
+
+type Vehicle @pgTable(name: "vehicles") {
+  id: ID! @unique
+  name: String!
+  vehicle_class: String!
+  consumables: String
+  cost_in_credits: String
+  crew: String
+  length: String
+  manufacturer: String
+  max_atmosphering_speed: String
+  model: String
+  passengers: String
+  pilots: [Person!]!
+}
