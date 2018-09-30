@@ -43,6 +43,15 @@ data = {
     'planets': swapi_list_resource_cached('https://swapi.co/api/planets'),
 }
 
+uuid_registry = {}
+
+def id_to_uuid(id):
+    global uuid_registry
+    if not id in uuid_registry:
+        uuid_registry[id] = uuid.uuid4()
+
+    return uuid_registry[id]
+
 def filter_known(str):
     return None if str == 'n/a' or str == 'N/A' or str == 'unknown' else str
 
@@ -67,9 +76,14 @@ class Column:
 
     def value(self, item):
         if self.not_null:
-            return item[self.source_key]
+            value = item[self.source_key]
         else:
-            return filter_known(item[self.source_key])
+            value = filter_known(item[self.source_key])
+
+        if self.sql_type == 'uuid' and value:
+            value = psycopg2.extensions.adapt(id_to_uuid(value))
+
+        return value
 
 def raw_sql():
     dbconn = psycopg2.connect(dbname='starwarsdb',
@@ -96,13 +110,13 @@ def raw_sql():
 
     def define_resource_table(name, items, *columns):
         columns_str = ', '.join(map(lambda column: column.sql_def, columns))
-        create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
+        create = 'CREATE TABLE %s (id uuid PRIMARY KEY, %s)' % (name, columns_str)
 
         sql(create)
 
         for item in items:
             kw = {}
-            kw['id'] = item['url']
+            kw['id'] = psycopg2.extensions.adapt(id_to_uuid(item['url']))
             for column in columns:
                 kw[column.name] = column.value(item)
             sql_insert(name, 'id', **kw)
@@ -111,8 +125,8 @@ def raw_sql():
         # id UUID PRIMARY KEY,
 
         create = """CREATE TABLE %s (
-        %s_id text REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
-        %s_id text REFERENCES %s (id) ON UPDATE CASCADE
+        %s_id uuid REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
+        %s_id uuid REFERENCES %s (id) ON UPDATE CASCADE
         )""" % (name, source_table, source_table, target_table, target_table)
 
         sql(create)
@@ -121,12 +135,13 @@ def raw_sql():
             for target_id in fields_fn(item):
                 kw = {}
                 #kw['id'] = psycopg2.extensions.adapt(uuid.uuid4())
-                kw['%s_id' % source_table] = item['url']
-                kw['%s_id' % target_table] = target_id
+                kw['%s_id' % source_table] = psycopg2.extensions.adapt(id_to_uuid(item['url']))
+                kw['%s_id' % target_table] = psycopg2.extensions.adapt(id_to_uuid(target_id))
                 sql_insert(name, None, **kw)
 
     print('start drop tables')
 
+    sql('DROP TABLE IF EXISTS person_lifeforms')
     sql('DROP TABLE IF EXISTS person_films')
     sql('DROP TABLE IF EXISTS planet_films')
     sql('DROP TABLE IF EXISTS starship_films')
@@ -160,7 +175,7 @@ def raw_sql():
                           Column('language'),
                           Column('average_height'),
                           Column('average_lifespan'),
-                          Column('homeworld', references='planet'))
+                          Column('homeworld', sql_type='uuid', references='planet'))
 
     define_resource_table('person', data['people'],
                           Column('name', not_null=True),
@@ -171,7 +186,7 @@ def raw_sql():
                           Column('eye_color'),
                           Column('birth_year'),
                           Column('gender'),
-                          Column('homeworld', references='planet'))
+                          Column('homeworld', sql_type='uuid', references='planet'))
 
     define_resource_table('film', data['films'],
                           Column('title', not_null=True),
