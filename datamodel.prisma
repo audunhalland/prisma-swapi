@@ -10,6 +10,7 @@ type Planet @pgTable(name: "planets") {
   surface_water: String
   terrain: String
   people: [Person!]!
+  films: [Film!]!
 }
 
 type Lifeform @pgTable(name: "lifeforms") {
@@ -21,6 +22,7 @@ type Lifeform @pgTable(name: "lifeforms") {
   average_height: String
   average_lifespan: String
   homeworld: Planet @pgRelation(column: "homeworld")
+  films: [Film!]!
 }
 
 type Person @pgTable(name: "people") {
@@ -35,19 +37,52 @@ type Person @pgTable(name: "people") {
   skin_color: String
   homeworld: Planet @pgRelation(column: "homeworld")
   vehicles: [Vehicle!]!
+  films: [Film!]!
+}
+
+type Starship @pgTable(name: "starships") {
+  id: ID! @unique
+  name: String!
+  starship_class: String!
+  model: String
+  consumables: String
+  cost_in_credits: String
+  crew: String
+  hyperdrive_rating: String
+  length: String
+  manufacturer: String
+  mglt: String
+  passengers: String
+  pilots: [Person!]!
+  films: [Film!]!
 }
 
 type Vehicle @pgTable(name: "vehicles") {
   id: ID! @unique
   name: String!
   vehicle_class: String!
+  model: String
   consumables: String
   cost_in_credits: String
   crew: String
   length: String
   manufacturer: String
   max_atmosphering_speed: String
-  model: String
   passengers: String
   pilots: [Person!]!
+  films: [Film!]!
+}
+
+type Film @pgTable(name: "films") {
+  id: ID! @unique
+  title: String!
+  director: String!
+  producer: String
+  opening_crawl: String
+  release_date: String
+  lifeforms: [Lifeform!]!
+  people: [Person!]!
+  planets: [Planet!]!
+  starships: [Starship!]!
+  vehicles: [Vehicle!]!
 }
