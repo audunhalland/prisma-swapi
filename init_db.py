@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import psycopg2
 import requests
@@ -123,6 +125,8 @@ def raw_sql():
                 kw['%s_id' % target_table] = target_id
                 sql_insert(name, None, **kw)
 
+    print('start drop tables')
+
     sql('DROP TABLE IF EXISTS people_films')
     sql('DROP TABLE IF EXISTS planet_films')
     sql('DROP TABLE IF EXISTS starship_films')
@@ -211,3 +215,5 @@ def raw_sql():
     define_edge_table('vehicle_pilots', 'vehicles', data['vehicles'], lambda vehicle: vehicle['pilots'], 'people')
 
     dbconn.commit()
+
+raw_sql()
