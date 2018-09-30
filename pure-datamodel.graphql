@@ -11,7 +11,7 @@ type Planet {
   surfaceWater: String
 }
 
-type Species {
+type Lifeform {
   id: ID! @unique
   name: String!
 }

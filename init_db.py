@@ -127,7 +127,7 @@ def raw_sql():
     sql('DROP TABLE IF EXISTS planet_films')
     sql('DROP TABLE IF EXISTS starship_films')
     sql('DROP TABLE IF EXISTS vehicle_films')
-    sql('DROP TABLE IF EXISTS species_films')
+    sql('DROP TABLE IF EXISTS lifeforms_films')
     sql('DROP TABLE IF EXISTS starship_pilots')
     sql('DROP TABLE IF EXISTS vehicle_pilots')
 
@@ -135,7 +135,7 @@ def raw_sql():
     sql('DROP TABLE IF EXISTS starships')
     sql('DROP TABLE IF EXISTS films')
     sql('DROP TABLE IF EXISTS people')
-    sql('DROP TABLE IF EXISTS species')
+    sql('DROP TABLE IF EXISTS lifeforms')
     sql('DROP TABLE IF EXISTS planets')
 
     define_resource_table('planets', data['planets'],
@@ -149,7 +149,7 @@ def raw_sql():
                           Column('gravity'),
                           Column('surface_water'))
 
-    define_resource_table('species', data['species'],
+    define_resource_table('lifeforms', data['species'],
                           Column('name', not_null=True),
                           Column('classification', not_null=True),
                           Column('designation'),
@@ -205,7 +205,7 @@ def raw_sql():
     define_edge_table('planet_films', 'planets', data['planets'], lambda planet: planet['films'], 'films')
     define_edge_table('starship_films', 'starships', data['starships'], lambda starship: starship['films'], 'films')
     define_edge_table('vehicle_films', 'vehicles', data['vehicles'], lambda vehicle: vehicle['films'], 'films')
-    define_edge_table('species_films', 'species', data['species'], lambda species: species['films'], 'films')
+    define_edge_table('lifeforms_films', 'lifeforms', data['species'], lambda species: species['films'], 'films')
 
     define_edge_table('starship_pilots', 'starships', data['starships'], lambda starship: starship['pilots'], 'people')
     define_edge_table('vehicle_pilots', 'vehicles', data['vehicles'], lambda vehicle: vehicle['pilots'], 'people')
