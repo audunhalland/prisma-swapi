@@ -127,22 +127,22 @@ def raw_sql():
 
     print('start drop tables')
 
-    sql('DROP TABLE IF EXISTS people_films')
+    sql('DROP TABLE IF EXISTS person_films')
     sql('DROP TABLE IF EXISTS planet_films')
     sql('DROP TABLE IF EXISTS starship_films')
     sql('DROP TABLE IF EXISTS vehicle_films')
-    sql('DROP TABLE IF EXISTS lifeforms_films')
+    sql('DROP TABLE IF EXISTS lifeform_films')
     sql('DROP TABLE IF EXISTS starship_pilots')
     sql('DROP TABLE IF EXISTS vehicle_pilots')
 
-    sql('DROP TABLE IF EXISTS vehicles')
-    sql('DROP TABLE IF EXISTS starships')
-    sql('DROP TABLE IF EXISTS films')
-    sql('DROP TABLE IF EXISTS people')
-    sql('DROP TABLE IF EXISTS lifeforms')
-    sql('DROP TABLE IF EXISTS planets')
+    sql('DROP TABLE IF EXISTS vehicle')
+    sql('DROP TABLE IF EXISTS starship')
+    sql('DROP TABLE IF EXISTS film')
+    sql('DROP TABLE IF EXISTS person')
+    sql('DROP TABLE IF EXISTS lifeform')
+    sql('DROP TABLE IF EXISTS planet')
 
-    define_resource_table('planets', data['planets'],
+    define_resource_table('planet', data['planets'],
                           Column('name', not_null=True),
                           Column('population'),
                           Column('terrain'),
@@ -153,16 +153,16 @@ def raw_sql():
                           Column('gravity'),
                           Column('surface_water'))
 
-    define_resource_table('lifeforms', data['species'],
+    define_resource_table('lifeform', data['species'],
                           Column('name', not_null=True),
                           Column('classification', not_null=True),
                           Column('designation'),
                           Column('language'),
                           Column('average_height'),
                           Column('average_lifespan'),
-                          Column('homeworld', references='planets'))
+                          Column('homeworld', references='planet'))
 
-    define_resource_table('people', data['people'],
+    define_resource_table('person', data['people'],
                           Column('name', not_null=True),
                           Column('height'),
                           Column('mass'),
@@ -171,16 +171,16 @@ def raw_sql():
                           Column('eye_color'),
                           Column('birth_year'),
                           Column('gender'),
-                          Column('homeworld', references='planets'))
+                          Column('homeworld', references='planet'))
 
-    define_resource_table('films', data['films'],
+    define_resource_table('film', data['films'],
                           Column('title', not_null=True),
                           Column('director', not_null=True),
                           Column('producer'),
                           Column('release_date'),
                           Column('opening_crawl'))
 
-    define_resource_table('starships', data['starships'],
+    define_resource_table('starship', data['starships'],
                           Column('name', not_null=True),
                           Column('starship_class', not_null=True),
                           Column('model'),
@@ -193,7 +193,7 @@ def raw_sql():
                           Column('hyperdrive_rating'),
                           Column('passengers'))
 
-    define_resource_table('vehicles', data['vehicles'],
+    define_resource_table('vehicle', data['vehicles'],
                           Column('name', not_null=True),
                           Column('vehicle_class', not_null=True),
                           Column('model'),
@@ -205,14 +205,16 @@ def raw_sql():
                           Column('passengers'),
                           Column('max_atmosphering_speed'))
 
-    define_edge_table('people_films', 'people', data['people'], lambda person: person['films'], 'films')
-    define_edge_table('planet_films', 'planets', data['planets'], lambda planet: planet['films'], 'films')
-    define_edge_table('starship_films', 'starships', data['starships'], lambda starship: starship['films'], 'films')
-    define_edge_table('vehicle_films', 'vehicles', data['vehicles'], lambda vehicle: vehicle['films'], 'films')
-    define_edge_table('lifeforms_films', 'lifeforms', data['species'], lambda species: species['films'], 'films')
+    define_edge_table('person_films', 'person', data['people'], lambda person: person['films'], 'film')
+    define_edge_table('planet_films', 'planet', data['planets'], lambda planet: planet['films'], 'film')
+    define_edge_table('starship_films', 'starship', data['starships'], lambda starship: starship['films'], 'film')
+    define_edge_table('vehicle_films', 'vehicle', data['vehicles'], lambda vehicle: vehicle['films'], 'film')
+    define_edge_table('lifeform_films', 'lifeform', data['species'], lambda species: species['films'], 'film')
 
-    define_edge_table('starship_pilots', 'starships', data['starships'], lambda starship: starship['pilots'], 'people')
-    define_edge_table('vehicle_pilots', 'vehicles', data['vehicles'], lambda vehicle: vehicle['pilots'], 'people')
+    define_edge_table('starship_pilots', 'starship', data['starships'], lambda starship: starship['pilots'], 'person')
+    define_edge_table('vehicle_pilots', 'vehicle', data['vehicles'], lambda vehicle: vehicle['pilots'], 'person')
+
+    define_edge_table('person_lifeforms', 'person', data['people'], lambda person: person['species'], 'lifeform')
 
     dbconn.commit()
 
