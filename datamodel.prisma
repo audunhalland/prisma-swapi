@@ -9,7 +9,7 @@ type Planet @pgTable(name: "planet") {
   rotation_period: String
   surface_water: String
   terrain: String
-  people: [Person!]!
+  people: [Character!]!
   films: [Film!]!
 }
 
@@ -22,11 +22,11 @@ type Lifeform @pgTable(name: "lifeform") {
   average_height: String
   average_lifespan: String
   homeworld: Planet @pgRelation(column: "homeworld")
-  people: [Person!]!
+  people: [Character!]!
   films: [Film!]!
 }
 
-type Person @pgTable(name: "person") {
+type Character @pgTable(name: "person") {
   id: UUID! @unique
   name: String!
   birth_year: String
@@ -56,7 +56,7 @@ type Starship @pgTable(name: "starship") {
   manufacturer: String
   mglt: String
   passengers: String
-  pilots: [Person!]!
+  pilots: [Character!]!
   films: [Film!]!
 }
 
@@ -72,7 +72,7 @@ type Vehicle @pgTable(name: "vehicle") {
   manufacturer: String
   max_atmosphering_speed: String
   passengers: String
-  pilots: [Person!]!
+  pilots: [Character!]!
   films: [Film!]!
 }
 
@@ -85,7 +85,7 @@ type Film @pgTable(name: "film") {
   release_date: String
   planets: [Planet!]!
   lifeforms: [Lifeform!]!
-  people: [Person!]!
+  people: [Character!]!
   starships: [Starship!]!
   vehicles: [Vehicle!]!
 }
