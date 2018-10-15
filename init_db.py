@@ -56,12 +56,13 @@ def filter_known(str):
     return None if str == 'n/a' or str == 'N/A' or str == 'unknown' else str
 
 class Column:
-    def __init__(self, name, sql_type='text', source_key=None, not_null=False, references=None):
+    def __init__(self, name, sql_type='text', source_key=None, not_null=False, references=None, map_id=False):
         self.name = name
         self.sql_type = sql_type
         self.not_null = not_null
         self.source_key = source_key or name
         self.references = references
+        self.map_id = map_id
 
     @property
     def sql_def(self):
@@ -80,8 +81,8 @@ class Column:
         else:
             value = filter_known(item[self.source_key])
 
-        if self.sql_type == 'uuid' and value:
-            value = psycopg2.extensions.adapt(id_to_uuid(value))
+        if self.map_id and value:
+            value = str(id_to_uuid(value))
 
         return value
 
@@ -110,23 +111,21 @@ def raw_sql():
 
     def define_resource_table(name, items, *columns):
         columns_str = ', '.join(map(lambda column: column.sql_def, columns))
-        create = 'CREATE TABLE %s (id uuid PRIMARY KEY, %s)' % (name, columns_str)
+        create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
 
         sql(create)
 
         for item in items:
             kw = {}
-            kw['id'] = psycopg2.extensions.adapt(id_to_uuid(item['url']))
+            kw['id'] = str(id_to_uuid(item['url']))
             for column in columns:
                 kw[column.name] = column.value(item)
             sql_insert(name, 'id', **kw)
 
     def define_edge_table(name, source_table, source_data, fields_fn, target_table):
-        # id UUID PRIMARY KEY,
-
         create = """CREATE TABLE %s (
-        %s_id uuid REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
-        %s_id uuid REFERENCES %s (id) ON UPDATE CASCADE
+        %s_id text REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
+        %s_id text REFERENCES %s (id) ON UPDATE CASCADE
         )""" % (name, source_table, source_table, target_table, target_table)
 
         sql(create)
@@ -134,9 +133,8 @@ def raw_sql():
         for item in source_data:
             for target_id in fields_fn(item):
                 kw = {}
-                #kw['id'] = psycopg2.extensions.adapt(uuid.uuid4())
-                kw['%s_id' % source_table] = psycopg2.extensions.adapt(id_to_uuid(item['url']))
-                kw['%s_id' % target_table] = psycopg2.extensions.adapt(id_to_uuid(target_id))
+                kw['%s_id' % source_table] = str(id_to_uuid(item['url']))
+                kw['%s_id' % target_table] = str(id_to_uuid(target_id))
                 sql_insert(name, None, **kw)
 
     print('start drop tables')
@@ -175,7 +173,7 @@ def raw_sql():
                           Column('language'),
                           Column('average_height'),
                           Column('average_lifespan'),
-                          Column('homeworld', sql_type='uuid', references='planet'))
+                          Column('homeworld', map_id=True, references='planet'))
 
     define_resource_table('person', data['people'],
                           Column('name', not_null=True),
@@ -186,7 +184,7 @@ def raw_sql():
                           Column('eye_color'),
                           Column('birth_year'),
                           Column('gender'),
-                          Column('homeworld', sql_type='uuid', references='planet'))
+                          Column('homeworld', map_id=True, references='planet'))
 
     define_resource_table('film', data['films'],
                           Column('title', not_null=True),
