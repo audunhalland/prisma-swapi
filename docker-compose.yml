@@ -10,22 +10,41 @@ services:
       - POSTGRES_USER=prisma
       - POSTGRES_PASSWORD=prisma123
 
-  prisma:
-    image: prismagraphql/prisma:1.17.0
+  #prisma:
+  #  image: prismagraphql/prisma:1.17.0
+  #  restart: always
+  #  ports:
+  #    - 4466:4466
+  #  environment:
+  #    PRISMA_CONFIG: |
+  #      port: 4466
+  #      databases:
+  #        default:
+  #          connector: postgres
+  #          host: postgres
+  #          port: 5432
+  #          database: starwarsdb
+  #          schema: public
+  #          user: prisma
+  #          password: prisma123
+  #          migrations: false
+  #          ssl: false
+
+  postgrest:
+    image: postgrest/postgrest
     restart: always
     ports:
-      - 4466:4466
+      - 3005:3000
     environment:
-      PRISMA_CONFIG: |
-        port: 4466
-        databases:
-          default:
-            connector: postgres
-            host: postgres
-            port: 5432
-            database: starwarsdb
-            schema: public
-            user: prisma
-            password: prisma123
-            migrations: false
-            ssl: false
+      PGRST_DB_URI: postgres://prisma:prisma123@postgres:5432/starwarsdb
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: app_user #In production this role should not be the same as the one used for the connection
+
+  swagger:
+    image: swaggerapi/swagger-ui
+    ports:
+      - 8080:8080
+    expose:
+      - 8080
+    environment:
+      API_URL: http://localhost:3005/

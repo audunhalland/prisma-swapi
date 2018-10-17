@@ -87,8 +87,10 @@ class Column:
         return value
 
 def raw_sql():
+    postgres_user = 'prisma'
+    postgrest_role = 'app_user'
     dbconn = psycopg2.connect(dbname='starwarsdb',
-                              user='prisma',
+                              user=postgres_user,
                               password='prisma123',
                               host='localhost',
                               port=5432)
@@ -114,6 +116,7 @@ def raw_sql():
         create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
 
         sql(create)
+        sql('GRANT SELECT ON %s to %s' % (name, postgrest_role))
 
         for item in items:
             kw = {}
@@ -129,6 +132,7 @@ def raw_sql():
         )""" % (name, source_table, source_table, target_table, target_table)
 
         sql(create)
+        sql('GRANT SELECT ON %s to %s' % (name, postgrest_role))
 
         for item in source_data:
             for target_id in fields_fn(item):
@@ -154,6 +158,21 @@ def raw_sql():
     sql('DROP TABLE IF EXISTS person')
     sql('DROP TABLE IF EXISTS lifeform')
     sql('DROP TABLE IF EXISTS planet')
+
+    sql('REVOKE USAGE ON SCHEMA public FROM %s' % postgrest_role)
+
+    try:
+        sql('DROP ROLE %s' % postgrest_role)
+    except Exception as e:
+        print('drop role error: ', e)
+        pass
+    dbconn.commit()
+
+    print('setup postgrest roles')
+
+    sql('CREATE ROLE %s nologin' % postgrest_role)
+    sql('GRANT %s TO %s' % (postgrest_role, postgres_user))
+    sql('GRANT USAGE ON SCHEMA public TO %s' % postgrest_role)
 
     define_resource_table('planet', data['planets'],
                           Column('name', not_null=True),
