@@ -89,6 +89,7 @@ class Column:
 def raw_sql():
     postgres_user = 'prisma'
     postgrest_role = 'app_user'
+    postgrest_permission = 'all'
     dbconn = psycopg2.connect(dbname='starwarsdb',
                               user=postgres_user,
                               password='prisma123',
@@ -116,7 +117,7 @@ def raw_sql():
         create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
 
         sql(create)
-        sql('GRANT SELECT ON %s to %s' % (name, postgrest_role))
+        sql('GRANT %s ON %s to %s' % (postgrest_permission, name, postgrest_role))
 
         for item in items:
             kw = {}
@@ -132,7 +133,7 @@ def raw_sql():
         )""" % (name, source_table, source_table, target_table, target_table)
 
         sql(create)
-        sql('GRANT SELECT ON %s to %s' % (name, postgrest_role))
+        sql('GRANT %s ON %s to %s' % (postgrest_permission, name, postgrest_role))
 
         for item in source_data:
             for target_id in fields_fn(item):
@@ -145,6 +146,8 @@ def raw_sql():
 
     sql('DROP TABLE IF EXISTS person_lifeforms')
     sql('DROP TABLE IF EXISTS person_films')
+    sql('DROP TABLE IF EXISTS character_lifeforms')
+    sql('DROP TABLE IF EXISTS character_films')
     sql('DROP TABLE IF EXISTS planet_films')
     sql('DROP TABLE IF EXISTS starship_films')
     sql('DROP TABLE IF EXISTS vehicle_films')
@@ -156,6 +159,7 @@ def raw_sql():
     sql('DROP TABLE IF EXISTS starship')
     sql('DROP TABLE IF EXISTS film')
     sql('DROP TABLE IF EXISTS person')
+    sql('DROP TABLE IF EXISTS character')
     sql('DROP TABLE IF EXISTS lifeform')
     sql('DROP TABLE IF EXISTS planet')
 
@@ -194,7 +198,7 @@ def raw_sql():
                           Column('average_lifespan'),
                           Column('homeworld', map_id=True, references='planet'))
 
-    define_resource_table('person', data['people'],
+    define_resource_table('character', data['people'],
                           Column('name', not_null=True),
                           Column('height'),
                           Column('mass'),
@@ -237,16 +241,16 @@ def raw_sql():
                           Column('passengers'),
                           Column('max_atmosphering_speed'))
 
-    define_edge_table('person_films', 'person', data['people'], lambda person: person['films'], 'film')
+    define_edge_table('character_films', 'character', data['people'], lambda person: person['films'], 'film')
     define_edge_table('planet_films', 'planet', data['planets'], lambda planet: planet['films'], 'film')
     define_edge_table('starship_films', 'starship', data['starships'], lambda starship: starship['films'], 'film')
     define_edge_table('vehicle_films', 'vehicle', data['vehicles'], lambda vehicle: vehicle['films'], 'film')
     define_edge_table('lifeform_films', 'lifeform', data['species'], lambda species: species['films'], 'film')
 
-    define_edge_table('starship_pilots', 'starship', data['starships'], lambda starship: starship['pilots'], 'person')
-    define_edge_table('vehicle_pilots', 'vehicle', data['vehicles'], lambda vehicle: vehicle['pilots'], 'person')
+    define_edge_table('starship_pilots', 'starship', data['starships'], lambda starship: starship['pilots'], 'character')
+    define_edge_table('vehicle_pilots', 'vehicle', data['vehicles'], lambda vehicle: vehicle['pilots'], 'character')
 
-    define_edge_table('person_lifeforms', 'person', data['people'], lambda person: person['species'], 'lifeform')
+    define_edge_table('character_lifeforms', 'character', data['people'], lambda person: person['species'], 'lifeform')
 
     dbconn.commit()
 
