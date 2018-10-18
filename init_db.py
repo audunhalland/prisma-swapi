@@ -82,7 +82,7 @@ class Column:
             value = filter_known(item[self.source_key])
 
         if self.map_id and value:
-            value = str(id_to_uuid(value))
+            value = psycopg2.extensions.adapt(id_to_uuid(value))
 
         return value
 
@@ -114,22 +114,22 @@ def raw_sql():
 
     def define_resource_table(name, items, *columns):
         columns_str = ', '.join(map(lambda column: column.sql_def, columns))
-        create = 'CREATE TABLE %s (id text PRIMARY KEY, %s)' % (name, columns_str)
+        create = 'CREATE TABLE %s (id uuid PRIMARY KEY DEFAULT uuid_generate_v4(), %s)' % (name, columns_str)
 
         sql(create)
         sql('GRANT %s ON %s to %s' % (postgrest_permission, name, postgrest_role))
 
         for item in items:
             kw = {}
-            kw['id'] = str(id_to_uuid(item['url']))
+            kw['id'] = psycopg2.extensions.adapt(id_to_uuid(item['url']))
             for column in columns:
                 kw[column.name] = column.value(item)
             sql_insert(name, 'id', **kw)
 
     def define_edge_table(name, source_table, source_data, fields_fn, target_table):
         create = """CREATE TABLE %s (
-        %s_id text REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
-        %s_id text REFERENCES %s (id) ON UPDATE CASCADE
+        %s_id uuid REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
+        %s_id uuid REFERENCES %s (id) ON UPDATE CASCADE
         )""" % (name, source_table, source_table, target_table, target_table)
 
         sql(create)
@@ -163,14 +163,15 @@ def raw_sql():
     sql('DROP TABLE IF EXISTS lifeform')
     sql('DROP TABLE IF EXISTS planet')
 
-    sql('REVOKE USAGE ON SCHEMA public FROM %s' % postgrest_role)
-
     try:
+        sql('REVOKE USAGE ON SCHEMA public FROM %s' % postgrest_role)
         sql('DROP ROLE %s' % postgrest_role)
     except Exception as e:
         print('drop role error: ', e)
         pass
     dbconn.commit()
+
+    sql('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
 
     print('setup postgrest roles')
 
@@ -196,7 +197,7 @@ def raw_sql():
                           Column('language'),
                           Column('average_height'),
                           Column('average_lifespan'),
-                          Column('homeworld', map_id=True, references='planet'))
+                          Column('homeworld', sql_type='uuid', map_id=True, references='planet'))
 
     define_resource_table('character', data['people'],
                           Column('name', not_null=True),
@@ -207,7 +208,7 @@ def raw_sql():
                           Column('eye_color'),
                           Column('birth_year'),
                           Column('gender'),
-                          Column('homeworld', map_id=True, references='planet'))
+                          Column('homeworld', sql_type='uuid', map_id=True, references='planet'))
 
     define_resource_table('film', data['films'],
                           Column('title', not_null=True),
