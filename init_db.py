@@ -128,8 +128,8 @@ def raw_sql():
 
     def define_edge_table(name, source_table, source_data, fields_fn, target_table):
         create = """CREATE TABLE %s (
-        %s_id uuid REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
-        %s_id uuid REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE
+        %s_id uuid NOT NULL REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE,
+        %s_id uuid NOT NULL REFERENCES %s (id) ON UPDATE CASCADE ON DELETE CASCADE
         )""" % (name, source_table, source_table, target_table, target_table)
 
         sql(create)
